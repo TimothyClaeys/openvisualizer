@@ -1,3 +1,4 @@
+pytest
 pyzmq==15.4.0
 pyserial==2.6
 PyDispatcher==2.0.3

@@ -1,0 +1,50 @@
+import os
+
+Import('env')
+
+testenv = env.Clone()
+
+path = os.path.join('openvisualizer', 'unittests', 'software')
+
+#===== unittests_openFrag
+
+unittests_openFrag = testenv.Command(
+    'test_report_openFrag.xml', [],
+    'py.test test_frag.py --junitxml reports/$TARGET.file',
+    chdir=path
+)
+
+testenv.AlwaysBuild(unittests_openFrag)
+testenv.Alias('unittests_openFrag', unittests_openFrag)
+
+#===== unittests_utils
+
+unittests_utils = testenv.Command(
+    'test_report_utils.xml', [],
+    'py.test test_utils.py --junitxml reports/$TARGET.file',
+    chdir=path
+)
+
+testenv.AlwaysBuild(unittests_utils)
+testenv.Alias('unittests_utils', unittests_utils)
+
+#===== unittests_moteProbe
+
+unittests_openHdlc = testenv.Command(
+    'test_report_openHdlc.xml', [],
+    'py.test test_hdlc.py --junitxml reports/$TARGET.file',
+    chdir=path
+)
+
+testenv.AlwaysBuild(unittests_openHdlc)
+testenv.Alias('unittests_openHdlc', unittests_openHdlc)
+
+#===== unittests_RPL
+
+unittests_RPL = testenv.Command(
+    'test_report_RPL.xml', [],
+    'py.test test_source_route.py --junitxml reports/$TARGET.file',
+    chdir=path
+)
+testenv.AlwaysBuild(unittests_RPL)
+testenv.Alias('unittests_RPL', unittests_RPL)

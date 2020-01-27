@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import logging.handlers
-import os
-import sys
 from random import randint, shuffle
 
 import pytest
@@ -10,14 +8,9 @@ import scapy.layers.inet6 as ip6
 import scapy.layers.sixlowpan as lo
 from scapy.compat import raw
 
-here = sys.path[0]
-sys.path.insert(0, os.path.join(here, '..', '..', '..'))  # root/
-sys.path.insert(0, os.path.join(here, '..'))  # openLbr/
-
-import openFrag
+from openvisualizer.openLbr import openFrag
 
 # ============================ logging =========================================
-
 LOGFILE_NAME = 'test_frag.log'
 
 log = logging.getLogger('test_frag')
