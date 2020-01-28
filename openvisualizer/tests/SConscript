@@ -1,0 +1,47 @@
+# Copyright (c) 2010-2013, Regents of the University of California.
+# All rights reserved.
+#
+# Released under the BSD 3-Clause license as published at the link below.
+# https://openwsn.atlassian.net/wiki/display/OW/License
+'''
+SCons script to run the unittests.
+'''
+
+import os
+import subprocess
+
+Import('env')
+
+def test_runner(env):
+    pypath = '.'
+    try:
+        envpath = os.environ['PYTHONPATH']
+        if envpath:
+            pypath = pypath + os.pathsep + envpath
+    except KeyError:
+        pass
+
+    subEnv = os.environ.copy()
+    subEnv['PYTHONPATH'] = pypath
+
+    arg_list = ['python', 'test_runner.py']
+
+    if env['TESTCODE']:
+        if env['TESTCODE'] == 'fw':
+            arg_list.append('--fw')
+
+        if env['TESTCODE'] == 'ov':
+            arg_list.append('--ov')
+
+        try:
+            p = subprocess.Popen(arg_list, env=subEnv)
+            p.wait()
+        except Exception as err:
+            print err
+
+
+test_env = env.Clone()
+Alias('unittests', test_runner(test_env))
+
+
+

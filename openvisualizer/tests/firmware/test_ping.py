@@ -3,6 +3,7 @@ import logging.handlers
 import pytest
 from scapy.compat import raw
 from scapy.layers.inet6 import IPv6, ICMPv6EchoRequest
+from scapy.sendrecv import sniff
 
 from tun import TunInterface
 
@@ -38,9 +39,14 @@ def test_ex_ping_request(etun):
     """
     Injects a ping request that originates from an external network
     """
+    response_buffer = []
+
     ip = IPv6(src=etun.ipv6_prefix + "::0002", dst=DEST_NETWORK_PREFIX + "1415:92cc:0:2", hlim=64)
     icmp = ICMPv6EchoRequest()
 
     pkt = ip / icmp
 
     etun.write(list(bytearray(raw(pkt))))
+    print sniff(filter='dst host cccc::2', count=1, timeout=10, iface=etun.if_name)
+
+    assert False

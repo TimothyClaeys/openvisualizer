@@ -44,31 +44,44 @@ Targets:
         runrover runs a minimal version of OpenVisualizer that should run on remote rovers.
         
         Options
-          --sim         Run in simulator mode with default count of motes.
-          --simCount=n  Run in simulator mode with 'n' motes.
-          --pathTopo  Run in simulator mode with data imported from a previous
-            topology saved in a json file.
-          --simTopology=<linear|fully-meshed>
+            --sim
+                        Run in simulator mode with default count of motes.
+            --simCount=n
+                        Run in simulator mode with 'n' motes.
+            --pathTopo
+                        Run in simulator mode with data imported from a previous
+                        topology saved in a json file.
+            --simTopology=<linear|fully-meshed>
                         Force a certain topology for simulation.
-          --nosimcopy   Skips copying simulation firmware at startup from the
+            --nosimcopy
+                        Skips copying simulation firmware at startup from the
                         openwsn-fw directory.
-          --ovdebug     Enable debug mode; more detailed logging
-          --usePageZero Use page number 0 in page dispatch of 6lowpan packet (only works within one-hop).
+            --ovdebug
+                        Enable debug mode; more detailed logging
+            --usePageZero
+                        Use page number 0 in page dispatch of 6lowpan packet (only works within one-hop).
 
         Web UI only
-          --host=<address> Web server listens on IP address;
-                           default 0.0.0.0 (all interfaces)
-          --port=n         Web server listens on port number 'n';
-                           default 8080
+            --host=<address>
+                        Web server listens on IP address;
+                        default 0.0.0.0 (all interfaces)
+            --port=n
+                        Web server listens on port number 'n';
+                        default 8080
 
-    
+    unittests:
+        Options
+            --target=<fw|ov>
+                        Runs a suite of unittests on the openvisualizer or
+                        on the OpenWSN firmware
+
     copy-simfw:
         Copy files for the simulator, generated from an OpenWSN firmware 
         build on this host. Assumes firmware top-level directory is 
         '../../../openwsn-fw'.
         
         Options
-          --simhost=<platform-os> 
+            --simhost=<platform-os>
                         Platform and OS for firmware; supports creation of a
                         setup package with multiple variants. Defaults to the
                         platform-OS on which SCons is running. Valid entries:
@@ -195,6 +208,7 @@ runnerEnv['ROOT'] = GetOption('root')
 # These options are used only by the web runner. We define them here for
 # simplicity, but they must be removed from non-web use in the runner 
 # SConscript.
+
 AddOption('--host',
     dest      = 'hostOpt',
     default   = '0.0.0.0',
@@ -206,6 +220,14 @@ AddOption('--port',
     default   = 8080,
     type      = 'int')
 runnerEnv['PORTOPT'] = GetOption('portOpt')
+
+#=========================== Unittest targets =================================
+
+AddOption('--target',
+    dest      = 'targetCode',
+    default   = '',
+    type      = 'string')
+runnerEnv['TESTCODE'] = GetOption('targetCode')
 
 #============================ SCons targets ===================================
 
@@ -315,28 +337,18 @@ def makeNativeSdist(env):
                     
 Alias('sdist-native', makeNativeSdist(env))
 
-#===== unittest
+#===== unittests
 
 # scan for SConscript contains unit tests
 dirs = [
-    os.path.join('openvisualizer', 'unittests', 'software'),
+    os.path.join('openvisualizer', 'tests'),
 ]
 
 for d in dirs:
     SConscript(
         os.path.join(d, 'SConscript'),
-        exports = {"env": env},
+        exports = {"env": runnerEnv},
     )
-
-Alias(
-    'unittests',
-    [
-        'unittests_openFrag',
-        'unittests_utils',
-        'unittests_openHdlc',
-        'unittests_RPL'
-    ]
-)
 
 #===== docs
 

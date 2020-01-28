@@ -1,6 +1,10 @@
 import os
+import select
 import struct
 from fcntl import ioctl
+
+from scapy.layers.inet6 import IPv6
+from scapy.packet import Packet
 
 
 def is_ipv6(data):
@@ -19,39 +23,25 @@ class TunInterface:
         self.ipv6_host = host
         self.tun_iff = self._create_tun_if()
 
-    def fileno(self):
-        return self.tun_iff
-
     def _create_tun_if(self):
         return_val = os.open("/dev/net/tun", os.O_RDWR)
         ifs = ioctl(return_val, self.TUN_SET_IFF, struct.pack("16sH", "tun%d", self.IFF_TUN))
-        if_name = ifs.decode('UTF-8')[:16].strip("\x00")
+        self.if_name = ifs.decode('UTF-8')[:16].strip("\x00")
 
-        os.system('ip tuntap add dev ' + if_name + ' mode tun user root')
-        os.system('ip link set ' + if_name + ' up')
-        os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + if_name)
-        os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + if_name)
+        os.system('ip tuntap add dev ' + self.if_name + ' mode tun user root')
+        os.system('ip link set ' + self.if_name + ' up')
+        os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + self.if_name)
+        os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.if_name)
 
         return return_val
 
-    def read(self, bytes_to_read=ETHERNET_MTU):
-        data = list(os.read(self.tun_iff, bytes_to_read))
-
-        # remove tun ID octets
-        data = data[4:]
-
-        if is_ipv6(data):
-            return data
-        else:
-            return []
-
     def write(self, data):
-
         if not self.tun_iff:
             return
 
         # add tun header and convert to bytes
-        data = bytes(self.VIRTUAL_TUN_ID + data)
+        data = self.VIRTUAL_TUN_ID + data
+        data = "".join([chr(b) for b in data])
 
         try:
             # write over tuntap interface
