@@ -137,6 +137,4 @@ def test_byteinverse(expected_byteinverse):
 def test_format_ipv6_addr(expected_format_ipv6):
     (ipv6_list, ipv6_string) = json.loads(expected_format_ipv6)
 
-    print ipv6_string
-
     assert u.formatIPv6Addr(ipv6_list) == ipv6_string

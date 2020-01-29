@@ -12,6 +12,8 @@ Module which coordinates RPL DIO and DAO messages.
                   April 2013
 '''
 import logging
+import sys
+
 log = logging.getLogger('RPL')
 log.setLevel(logging.ERROR)
 log.addHandler(logging.NullHandler())

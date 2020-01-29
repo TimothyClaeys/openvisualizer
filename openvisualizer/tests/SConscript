@@ -26,12 +26,19 @@ def test_runner(env):
 
     arg_list = ['python', 'test_runner.py']
 
+
     if env['TESTCODE']:
         if env['TESTCODE'] == 'fw':
-            arg_list.append('--fw')
+            arg_list.append('--target=firmware')
 
         if env['TESTCODE'] == 'ov':
-            arg_list.append('--ov')
+            arg_list.append('--target=software')
+
+        if env['SIMCOUNT']:
+            arg_list.append('--simCount=' + str(env['SIMCOUNT']))
+
+        if env['NF_TIMEOUT']:
+            arg_list.append('--nftimeout=' + str(env['NF_TIMEOUT']))
 
         try:
             p = subprocess.Popen(arg_list, env=subEnv)

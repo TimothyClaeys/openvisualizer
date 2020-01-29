@@ -153,7 +153,7 @@ def main():
         # write to file
         file = open(OUTPUT_FILE,'w')
         file.write(output)
-        file.close
+        file.close()
         
         print "{0} created successfully.".format(OUTPUT_FILE)
         

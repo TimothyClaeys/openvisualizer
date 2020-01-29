@@ -22,7 +22,7 @@ class ReassembleEntry(object):
         self.fragments = frag
 
 
-class OpenFrag(object):
+class Fragmentor(object):
     """
     Class which performs fragmentation and reassembly of 6LoWPAN packets for transport of IEEE 802.15.4 networks.
 

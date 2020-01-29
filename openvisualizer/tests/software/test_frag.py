@@ -8,7 +8,7 @@ import scapy.layers.inet6 as ip6
 import scapy.layers.sixlowpan as lo
 from scapy.compat import raw
 
-from openvisualizer.openLbr import openFrag
+from openvisualizer.openLbr import sixlowpan_frag
 
 # ============================ logging =========================================
 LOGFILE_NAME = 'test_frag.log'
@@ -63,7 +63,7 @@ def test_reassemble_fragments(random_6lwp_fragments):
 
     log.debug("test_reassemble_fragments")
 
-    assembler = openFrag.OpenFrag()
+    assembler = sixlowpan_frag.Fragmentor()
 
     for frag in frag_list:
         result = assembler.do_reassemble(frag)
@@ -77,7 +77,7 @@ def test_fragment_packet(random_6lwp_fragments):
 
     log.debug("test_fragment_packet")
 
-    fragmentor = openFrag.OpenFrag()
+    fragmentor = sixlowpan_frag.Fragmentor()
 
     log.debug("Original packet (len: {}) -- {}".format(len(ip_pkt), ip_pkt))
 

@@ -1,14 +1,10 @@
 import os
 import select
+from ipaddr import IPv6Address
 import struct
 from fcntl import ioctl
 
 from scapy.layers.inet6 import IPv6
-from scapy.packet import Packet
-
-
-def is_ipv6(data):
-    return (data[0] & 0xf0) == 0x61
 
 
 class TunInterface:
@@ -18,7 +14,7 @@ class TunInterface:
     TUN_SET_IFF = 0x400454ca
     ETHERNET_MTU = 1500
 
-    def __init__(self, prefix='cccc:0000:0000:0000', host='0000:0000:0000:0001'):
+    def __init__(self, prefix='cccc::', host='1'):
         self.ipv6_prefix = prefix
         self.ipv6_host = host
         self.tun_iff = self._create_tun_if()
@@ -30,10 +26,31 @@ class TunInterface:
 
         os.system('ip tuntap add dev ' + self.if_name + ' mode tun user root')
         os.system('ip link set ' + self.if_name + ' up')
-        os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + self.if_name)
+        os.system('ip -6 addr add ' + self.ipv6_prefix + self.ipv6_host + '/64 dev ' + self.if_name)
         os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.if_name)
 
         return return_val
+
+    def read(self, dest=None, count=1, timeout=0):
+        received = []
+        while True:
+            readable, _, _ = select.select([self.tun_iff], [], [], timeout)
+            if len(readable) > 0:
+                pkt_byte = os.read(self.tun_iff, self.ETHERNET_MTU)[4:]
+
+                if IPv6(pkt_byte).version == 6:
+                    if dest is not None:
+                        if IPv6Address(IPv6(pkt_byte).dst).exploded == IPv6Address(dest).exploded:
+                            received.append(pkt_byte)
+                    else:
+                        received.append(pkt_byte)
+
+                if 1 <= count == len(received):
+                    break
+            else:
+                break
+
+        return received
 
     def write(self, data):
         if not self.tun_iff:

@@ -229,6 +229,12 @@ AddOption('--target',
     type      = 'string')
 runnerEnv['TESTCODE'] = GetOption('targetCode')
 
+AddOption('--nftimeout',
+    dest      = 'nftimeout',
+    default   = '60',
+    type      = 'string')
+runnerEnv['NF_TIMEOUT'] = GetOption('nftimeout')
+
 #============================ SCons targets ===================================
 
 #===== copy-simfw
