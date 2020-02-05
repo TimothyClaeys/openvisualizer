@@ -26,6 +26,8 @@ for loggerName in ['test_firmware']:
     temp.setLevel(logging.DEBUG)
     temp.addHandler(logHandler)
 
+file_openwsn = "openwsn.txt"
+
 # ============================= defines =======================================
 
 NH_ICMPV6 = 58
@@ -55,11 +57,15 @@ def pytest_addoption(parser):
 def stdout_reader(proc, outq):
     for line in iter(proc.stdout.readline, b''):
         outq.put(line.decode('utf-8'))
+        with open(file_openwsn, 'a') as f:
+            f.write(line.decode('utf-8'))
 
 
 def stderr_reader(proc, outq):
     for line in iter(proc.stderr.readline, b''):
         outq.put(line.decode('utf-8'))
+        with open(file_openwsn, 'a') as f:
+            f.write(line.decode('utf-8'))
 
 
 def is_my_icmpv6(ipv6_pkt, his_address, my_address):
