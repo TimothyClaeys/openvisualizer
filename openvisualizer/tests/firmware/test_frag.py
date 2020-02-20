@@ -1,18 +1,30 @@
-import time
 from random import randint
 
 import pytest
 from scapy.compat import raw
 from scapy.layers.inet6 import IPv6, ICMPv6EchoRequest, ICMPv6EchoReply
 
-from openvisualizer.moteConnector import OpenParser
-from openvisualizer.openLbr.sixlowpan_frag import Fragmentor
 from openvisualizer.tests.firmware.conftest import is_my_icmpv6
-
 
 # =========================== defines ==========================================
 
+ROUND_TRIP_TIMEOUT = 60
+IPV6_HDR_LEN = 40
+
+
 # =========================== helpers ==========================================
+
+def generate_icmpv6_pkt(src, dst, payload_length):
+    ip = IPv6(src=src, dst=dst, hlim=64)
+    id = randint(0, 65535)
+    seq = randint(0, 65535)
+    icmp = ICMPv6EchoRequest(id=id, seq=seq)
+    pkt = ip / icmp
+
+    payload = "".join([chr(randint(0, 255)) for b in range(payload_length)])
+    pkt.add_payload(payload)
+
+    return id, seq, list(bytearray(raw(pkt)))
 
 
 def _read_joined_addresses():
@@ -37,24 +49,16 @@ def test_basic_6lo_fragmentation(etun, ov_env, my_addr, node_addr, payload_len):
     if node_addr not in node_joined:
         pytest.skip("Node with address {} never joined, skipping this test".format(node_addr))
 
-    ip = IPv6(src=my_addr, dst=node_addr, hlim=64)
-    id = randint(0, 65535)
-    seq = randint(0, 65535)
-    icmp = ICMPv6EchoRequest(id=id, seq=seq)
-    pkt = ip / icmp
-
-    payload = "".join([chr(randint(0, 255)) for b in range(payload_len)])
-    pkt.add_payload(payload)
-
-    etun.write(list(bytearray(raw(pkt))))
-    received = etun.read(dest=my_addr, timeout=25)
+    id, seq, pkt = generate_icmpv6_pkt(my_addr, node_addr, payload_len)
+    etun.write(pkt)
+    received = etun.read(dest=my_addr, timeout=ROUND_TRIP_TIMEOUT)
 
     timeout = True
     for recv_pkt in received:
         ipv6_pkt = IPv6(recv_pkt)
         if is_my_icmpv6(ipv6_pkt, node_addr, my_addr):
             timeout = False
-            icmp = ICMPv6EchoReply(raw(ipv6_pkt)[40:])
+            icmp = ICMPv6EchoReply(raw(ipv6_pkt)[IPV6_HDR_LEN:])
             # check if icmp headers match
             assert icmp.id == id
             assert icmp.seq == seq
@@ -66,8 +70,8 @@ def test_basic_6lo_fragmentation(etun, ov_env, my_addr, node_addr, payload_len):
     # let the network recover between the different tests
 
 
-@pytest.mark.parametrize("payload_len", range(30, 100, 1))
-def test_corner_cases_6lo_frag(etun, ov_env, my_addr, node_addr, payload_len):
+@pytest.mark.parametrize("payload_len", range(5, 100, 1))
+def test_incremental_payload_6lo_frag(etun, ov_env, my_addr, node_addr, payload_len):
     """
     Test the corner case of the fragmentation code by changing the payload size byte by byte
     """
@@ -75,24 +79,16 @@ def test_corner_cases_6lo_frag(etun, ov_env, my_addr, node_addr, payload_len):
     if node_addr not in node_joined:
         pytest.skip("Node with address {} never joined, skipping this test".format(node_addr))
 
-    ip = IPv6(src=my_addr, dst=node_addr, hlim=64)
-    id = randint(0, 65535)
-    seq = randint(0, 65535)
-    icmp = ICMPv6EchoRequest(id=id, seq=seq)
-    pkt = ip / icmp
-
-    payload = "".join([chr(randint(0, 255)) for b in range(payload_len)])
-    pkt.add_payload(payload)
-
-    etun.write(list(bytearray(raw(pkt))))
-    received = etun.read(dest=my_addr, timeout=25)
+    id, seq, pkt = generate_icmpv6_pkt(my_addr, node_addr, payload_len)
+    etun.write(pkt)
+    received = etun.read(dest=my_addr, timeout=ROUND_TRIP_TIMEOUT)
 
     timeout = True
     for recv_pkt in received:
         ipv6_pkt = IPv6(recv_pkt)
         if is_my_icmpv6(ipv6_pkt, node_addr, my_addr):
             timeout = False
-            icmp = ICMPv6EchoReply(raw(ipv6_pkt)[40:])
+            icmp = ICMPv6EchoReply(raw(ipv6_pkt)[IPV6_HDR_LEN:])
             # check if icmp headers match
             assert icmp.id == id
             assert icmp.seq == seq

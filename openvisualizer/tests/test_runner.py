@@ -48,7 +48,7 @@ class TestRunner:
         pytest.main(args)
 
     def _create_pytest_command(self, test_path):
-        base_args = ['-x', test_path, '-v', '-rA', '--maxfail=100']
+        base_args = ['-x', test_path, '-v', '-rA', '--maxfail=1']
 
         if self.directory == "firmware":
             if self.simulation > 0:
