@@ -37,6 +37,7 @@ class OpenLbr(eventBusClient.eventBusClient):
     # http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xml
     IANA_PROTOCOL_IPv6ROUTE = 43
     IANA_UDP = 17
+    IANA_TCP = 6
     IANA_ICMPv6 = 58
     IANA_IPv6HOPHEADER = 0
 
@@ -424,6 +425,10 @@ class OpenLbr(eventBusClient.eventBusClient):
                     ipv6dic['app_payload'] = ipv6dic['payload'][8:]
 
                 dispatch_signal = (tuple(ipv6dic['dst_addr']), self.PROTO_UDP, ipv6dic['udp_dest_port'])
+
+            elif ipv6dic['next_header'] == self.IANA_TCP:
+                ipv6dic['app_payload'] = u.buf2int(ipv6dic['payload'][20:])
+                pass
 
             # keep payload and app_payload in case we want to assemble the message later.
             # as source address is being retrieved from the IPHC header, the signal includes it in case
