@@ -15,23 +15,21 @@ import logging.config
 import os
 import signal
 import sys
-from argparse import ArgumentParser
 
-import openvisualizer.openvisualizer_utils as u
-from openvisualizer import appdirs
-from openvisualizer.jrc import jrc
+import utils as u
 from openvisualizer.OVtracer import OVtracer
-from openvisualizer.rpl import rpl
-from openvisualizer.rpl import topology
 from openvisualizer.SimEngine import SimEngine, MoteHandler
 from openvisualizer.eventBus import eventBusMonitor
 from openvisualizer.eventLogger import eventLogger
+from openvisualizer.jrc import jrc
 from openvisualizer.motehandler.moteconnector import moteconnector
 from openvisualizer.motehandler.moteprobe import moteprobe
 from openvisualizer.motehandler.motestate import motestate
 from openvisualizer.openLbr import openLbr
 from openvisualizer.opentun.opentun import OpenTun
 from openvisualizer.remoteConnectorServer import remoteConnectorServer
+from openvisualizer.rpl import rpl
+from openvisualizer.rpl import topology
 
 log = logging.getLogger('openVisualizerApp')
 
@@ -65,6 +63,8 @@ class OpenVisualizerApp(object):
         self.jrc = jrc.JRC()
         self.topology = topology.topology()
         self.dagroot_list = []
+        self.mote_probes = []
+
         # create opentun call last since indicates prefix
         self.opentun = OpenTun.create(opentun_null)
         if self.simulator_mode:
@@ -90,20 +90,20 @@ class OpenVisualizerApp(object):
             import oos_openwsn
 
             MoteHandler.readNotifIds(os.path.join(self.data_dir, 'sim_files', 'openwsnmodule_obj.h'))
-            self.moteProbes = []
+            self.mote_probes = []
             for _ in range(self.num_motes):
                 mote_handler = MoteHandler.MoteHandler(oos_openwsn.OpenMote())
                 self.simengine.indicateNewMote(mote_handler)
-                self.moteProbes += [moteprobe.MoteProbe(mqtt_broker_address, emulated_mote=mote_handler)]
+                self.mote_probes += [moteprobe.MoteProbe(mqtt_broker_address, emulated_mote=mote_handler)]
         elif self.iotlab_motes:
             # in "IoT-LAB" mode, motes are connected to TCP ports
 
-            self.moteProbes = [
+            self.mote_probes = [
                 moteprobe.MoteProbe(mqtt_broker_address, iotlab_mote=p) for p in self.iotlab_motes.split(',')
             ]
         elif self.testbed_motes:
             motes_finder = moteprobe.OpentestbedMoteFinder(mqtt_broker_address)
-            self.moteProbes = [
+            self.mote_probes = [
                 moteprobe.MoteProbe(mqtt_broker_address, testbedmote_eui64=p)
                 for p in motes_finder.get_opentestbed_motelist()
             ]
@@ -111,12 +111,12 @@ class OpenVisualizerApp(object):
         else:
             # in "hardware" mode, motes are connected to the serial port
 
-            self.moteProbes = [
+            self.mote_probes = [
                 moteprobe.MoteProbe(mqtt_broker_address, serial_port=p) for p in moteprobe.find_serial_ports()
             ]
 
         # create a MoteConnector for each MoteProbe
-        self.mote_connectors = [moteconnector.MoteConnector(mp) for mp in self.moteProbes]
+        self.mote_connectors = [moteconnector.MoteConnector(mp) for mp in self.mote_probes]
 
         # create a MoteState for each MoteConnector
         self.mote_states = [motestate.MoteState(mc) for mc in self.mote_connectors]
@@ -183,7 +183,7 @@ class OpenVisualizerApp(object):
         # start tracing threads
         if self.trace:
             logging.config.fileConfig(
-                os.path.join(self.conf_dir, 'trace.conf'), {'logDir': _force_slash_sep(self.log_dir, self.debug)}
+                os.path.join(self.conf_dir, 'trace.conf'), {'logDir': u.force_slash_sep(self.log_dir, self.debug)}
             )
             OVtracer()
 
@@ -196,7 +196,7 @@ class OpenVisualizerApp(object):
         self.opentun.close()
         self.rpl.close()
         self.jrc.close()
-        for probe in self.moteProbes:
+        for probe in self.mote_probes:
             probe.close()
 
     def get_mote_state(self, moteid):
@@ -294,10 +294,7 @@ class OpenVisualizerApp(object):
 
 # ============================ main ============================================
 
-DEFAULT_MOTE_COUNT = 3
-
-
-def main(parser=None):
+def main(parser, conf_dir, data_dir, log_dir, sim_motes):
     """
     Entry point for application startup by UI. Parses common arguments.
     :param parser: Optional ArgumentParser passed in from enclosing UI module to allow that module to pre-parse
@@ -305,238 +302,46 @@ def main(parser=None):
     :rtype: openVisualizerApp object
     """
 
-    if parser is None:
-        parser = ArgumentParser()
+    args = parser.parse_args()
 
-    _add_parser_args(parser)
-    arg_space = parser.parse_args()
-
-    conf_dir, data_dir, log_dir = _init_external_dirs(arg_space.appdir, arg_space.debug)
-
-    # Must use a '/'-separated path for log dir, even on Windows.
-    logging.config.fileConfig(os.path.join(conf_dir, 'logging.conf'),
-                              {'logDir': _force_slash_sep(log_dir, arg_space.debug)})
-
-    if arg_space.path_topo:
-        arg_space.simulator_mode = True
-        arg_space.num_motes = 0
-        arg_space.sim_topology = "fully-meshed"
+    if args.path_topo:
+        args.simulator_mode = True
+        args.num_motes = 0
+        args.sim_topology = "fully-meshed"
         # --path_topo
-    elif arg_space.num_motes > 0:
+    elif args.num_motes > 0:
         # --simCount implies --sim
-        arg_space.simulator_mode = True
-    elif arg_space.simulator_mode:
+        args.simulator_mode = True
+    elif args.simulator_mode:
         # default count when --simCount not provided
-        arg_space.num_motes = DEFAULT_MOTE_COUNT
+        args.num_motes = sim_motes
 
     log.info('Initializing OpenVisualizerApp with options:\n\t{0}'.format(
-        '\n    '.join(['appdir      = {0}'.format(arg_space.appdir),
-                       'sim         = {0}'.format(arg_space.simulator_mode),
-                       'simCount    = {0}'.format(arg_space.num_motes),
-                       'trace       = {0}'.format(arg_space.trace),
-                       'debug       = {0}'.format(arg_space.debug),
-                       'testbed_motes= {0}'.format(arg_space.testbed_motes),
+        '\n    '.join(['appdir      = {0}'.format(args.appdir),
+                       'sim         = {0}'.format(args.simulator_mode),
+                       'simCount    = {0}'.format(args.num_motes),
+                       'trace       = {0}'.format(args.trace),
+                       'debug       = {0}'.format(args.debug),
+                       'testbed_motes= {0}'.format(args.testbed_motes),
 
-                       'use_page_zero = {0}'.format(arg_space.use_page_zero)],
+                       'use_page_zero = {0}'.format(args.use_page_zero)],
                       )))
-    log.info('Using external dirs:\n\t{0}'.format(
-        '\n    '.join(['conf     = {0}'.format(conf_dir),
-                       'data     = {0}'.format(data_dir),
-                       'log      = {0}'.format(log_dir)],
-                      )))
+
     log.info('sys.path:\n\t{0}'.format('\n\t'.join(str(p) for p in sys.path)))
 
     return OpenVisualizerApp(
         conf_dir=conf_dir,
         data_dir=data_dir,
         log_dir=log_dir,
-        simulator_mode=arg_space.simulator_mode,
-        num_motes=arg_space.num_motes,
-        trace=arg_space.trace,
-        debug=arg_space.debug,
-        use_page_zero=arg_space.use_page_zero,
-        sim_topology=arg_space.sim_topology,
-        iotlab_motes=arg_space.iotlab_motes,
-        testbed_motes=arg_space.testbed_motes,
-        path_topo=arg_space.path_topo,
-        mqtt_broker_address=arg_space.mqtt_broker_address,
-        opentun_null=arg_space.opentun_null
+        simulator_mode=args.simulator_mode,
+        num_motes=args.num_motes,
+        trace=args.trace,
+        debug=args.debug,
+        use_page_zero=args.use_page_zero,
+        sim_topology=args.sim_topology,
+        iotlab_motes=args.iotlab_motes,
+        testbed_motes=args.testbed_motes,
+        path_topo=args.path_topo,
+        mqtt_broker_address=args.mqtt_broker_address,
+        opentun_null=args.opentun_null
     )
-
-
-def _add_parser_args(parser):
-    parser.add_argument('-a', '--appDir',
-                        dest='appdir',
-                        default='.',
-                        action='store',
-                        help='working directory'
-                        )
-    parser.add_argument('-s', '--sim',
-                        dest='simulator_mode',
-                        default=False,
-                        action='store_true',
-                        help='simulation mode, with default of {0} motes'.format(DEFAULT_MOTE_COUNT)
-                        )
-    parser.add_argument('-n', '--simCount',
-                        dest='num_motes',
-                        type=int,
-                        default=0,
-                        help='simulation mode, with provided mote count'
-                        )
-    parser.add_argument('-t', '--trace',
-                        dest='trace',
-                        default=False,
-                        action='store_true',
-                        help='enables memory debugging'
-                        )
-    parser.add_argument('-st', '--simTopology',
-                        dest='sim_topology',
-                        default='',
-                        action='store',
-                        help='force a certain toplogy (simulation mode only)'
-                        )
-    parser.add_argument('-d', '--debug',
-                        dest='debug',
-                        default=False,
-                        action='store_true',
-                        help='enables application debugging'
-                        )
-    parser.add_argument('-pagez', '--usePageZero',
-                        dest='use_page_zero',
-                        default=False,
-                        action='store_true',
-                        help='use page number 0 in page dispatch (only works with one-hop)'
-                        )
-    parser.add_argument('-iotm', '--iotlabMotes',
-                        dest='iotlab_motes',
-                        default='',
-                        action='store',
-                        help='comma-separated list of IoT-LAB motes (e.g. "wsn430-9,wsn430-34,wsn430-3")'
-                        )
-    parser.add_argument('-tb', '--opentestbed',
-                        dest='testbed_motes',
-                        default=False,
-                        action='store_true',
-                        help='connect motes from opentestbed'
-                        )
-    parser.add_argument('--mqtt-broker-address',
-                        dest='mqtt_broker_address',
-                        default='argus.paris.inria.fr',
-                        action='store',
-                        help='MQTT broker address to use'
-                        )
-    parser.add_argument('--opentun-null',
-                        dest='opentun_null',
-                        default=False,
-                        action='store_true',
-                        help='don\'t use TUN device'
-                        )
-    parser.add_argument('-i', '--pathTopo',
-                        dest='path_topo',
-                        default='',
-                        action='store',
-                        help='a topology can be loaded from a json file'
-                        )
-    parser.add_argument('-ro', '--root',
-                        dest='root',
-                        default='',
-                        action='store',
-                        help='set mote associated to serial port as root'
-                        )
-
-
-def _force_slash_sep(ospath, debug):
-    """
-    Converts a Windows-based path to use '/' as the path element separator.
-    :param ospath: A relative or absolute path for the OS on which this process is running
-    :param debug: If true, print extra logging info
-    """
-
-    if os.sep == '/':
-        return ospath
-
-    head = ospath
-    path_list = []
-    while True:
-        head, tail = os.path.split(head)
-        if tail == '':
-            path_list.insert(0, head.rstrip('\\'))
-            break
-        else:
-            path_list.insert(0, tail)
-
-    path_str = '/'.join(path_list)
-    if debug:
-        print path_str
-    return path_str
-
-
-def _init_external_dirs(appdir, debug):
-    """
-    Find and define conf_dir for config files and data_dir for static data. Also
-    return log_dir for logs. There are several possiblities, searched in the order
-    described below.
-
-    1. Provided from command line, appdir parameter
-    2. In the directory containing openVisualizerApp.py
-    3. In native OS site-wide config and data directories
-    4. In the openvisualizer package directory
-
-    The directories differ only when using a native OS site-wide setup.
-
-    :param debug: If true, print extra logging info
-    :returns: 3-Tuple with config dir, data dir, and log dir
-    :raises: RuntimeError if files/directories not found as expected
-    """
-    if not appdir == '.':
-        if not _verify_conf_path(appdir):
-            raise RuntimeError('Config file not in expected directory: {0}'.format(appdir))
-        if debug:
-            print 'App data found via appdir'
-        return appdir, appdir, appdir
-
-    file_dir = os.path.dirname(__file__)
-    if _verify_conf_path(file_dir):
-        if debug:
-            print 'App data found via openVisualizerApp.py'
-        return file_dir, file_dir, file_dir
-
-    conf_dir = appdirs.site_config_dir('openvisualizer', 'OpenWSN')
-    # Must use system log dir on Linux since running as superuser.
-    linux_log_dir = '/var/log/openvisualizer'
-    if _verify_conf_path(conf_dir):
-        if not sys.platform.startswith('linux'):
-            raise RuntimeError('Native OS external directories supported only on Linux')
-
-        data_dir = appdirs.site_data_dir('openvisualizer', 'OpenWSN')
-        log_dir = linux_log_dir
-        if os.path.exists(data_dir):
-            if not os.path.exists(log_dir):
-                os.mkdir(log_dir)
-            if debug:
-                print 'App data found via native OS'
-            return conf_dir, data_dir, log_dir
-        else:
-            raise RuntimeError('Cannot find expected data directory: {0}'.format(data_dir))
-
-    data_dir = os.path.join(os.path.dirname(u.__file__), 'data')
-    if _verify_conf_path(data_dir):
-        if sys.platform == 'win32':
-            log_dir = appdirs.user_log_dir('openvisualizer', 'OpenWSN', opinion=False)
-        else:
-            log_dir = linux_log_dir
-        if not os.path.exists(log_dir):
-            # Must make intermediate directories on Windows
-            os.makedirs(log_dir)
-        if debug:
-            print 'App data found via openvisualizer package'
-
-        return data_dir, data_dir, log_dir
-    else:
-        raise RuntimeError('Cannot find expected data directory: {0}'.format(data_dir))
-
-
-def _verify_conf_path(conf_dir):
-    """ Returns True if OpenVisualizer conf files exist in the provided directory. """
-    conf_path = os.path.join(conf_dir, 'openvisualizer.conf')
-    return os.path.isfile(conf_path)
