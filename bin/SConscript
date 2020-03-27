@@ -174,11 +174,3 @@ cliEnv = env.Clone()
 cliEnv['WAIT_ON_UI'] = True
 cliEnv['ROVEROPT'] = None
 Alias('runcli', setupUiRunner(cliEnv, 'cli.py', []))
-
-roverEnv = env.Clone()
-roverEnv['HOSTOPT'] = None
-roverEnv['PORTOPT'] = None
-roverEnv['WEBOPT'] = None
-roverEnv['ROVEROPT'] = None
-roverEnv['WAIT_ON_UI'] = True
-Alias('runrover', setupUiRunner(roverEnv, 'openRoverApp.py', []))
