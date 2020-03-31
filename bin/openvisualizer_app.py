@@ -28,8 +28,7 @@ from openvisualizer.motehandler.motestate import motestate
 from openvisualizer.openLbr import openLbr
 from openvisualizer.opentun.opentun import OpenTun
 from openvisualizer.remoteConnectorServer import remoteConnectorServer
-from openvisualizer.rpl import rpl
-from openvisualizer.rpl import topology
+from openvisualizer.rpl import topology, rpl
 
 log = logging.getLogger('openVisualizerApp')
 
@@ -191,7 +190,7 @@ class OpenVisualizerApp(object):
 
     def close(self):
         """ Closes all thread-based components """
-        log.info('Closing OpenVisualizer')
+        log.info('killing OpenVisualizerApp')
 
         self.opentun.close()
         self.rpl.close()

@@ -12,33 +12,29 @@ import logging
 import re
 import threading
 import time
-from cmd import Cmd
 
 import bottle
 import netifaces as ni
 from bottle import view, response
 from coap import coap
 
+import openvisualizer
 from openvisualizer import ovVersion
 from openvisualizer.BspEmulator import VcdLogger
 from openvisualizer.SimEngine import SimEngine
 from openvisualizer.eventBus.eventBusClient import eventBusClient
 from openvisualizer.motehandler.motestate.motestate import MoteState
 
-log = logging.getLogger('openVisualizerWeb')
+log = logging.getLogger('WebServer')
 
 # add default parameters to all bottle templates
 view = functools.partial(view, ovVersion='.'.join(list([str(v) for v in ovVersion.VERSION])))
 
 
-class WebServer(eventBusClient, Cmd):
-    """
-    Provides web UI for OpenVisualizer. Runs as a webapp in a Bottle web
-    server.
-    """
-
+class WebServer(eventBusClient):
     def __init__(self, app, web_srv):
         """
+    Provides web UI for OpenVisualizer. Runs as a webapp in a Bottle web server.
         :param app: OpenVisualizerApp
         :param web_srv: Web server
         """
@@ -50,13 +46,7 @@ class WebServer(eventBusClient, Cmd):
         self.web_srv = web_srv
 
         # initialize parent classes
-        eventBusClient.__init__(self, name='OpenVisualizerWeb', registrations=[])
-        Cmd.__init__(self)
-
-        # command support
-        self.doc_header = 'Commands (type "help all" or "help <topic>"):'
-        self.prompt = '> '
-        self.intro = '\nOpenVisualizer  (type "help" for commands)'
+        super(WebServer, self).__init__(name='WebServer', registrations=[])
 
         # used for remote motes :
         self.rover_motes = {}

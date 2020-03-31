@@ -6,7 +6,7 @@ Sphinx==1.8.5
 netifaces
 yappi
 intelhex==2.1
-openwsn-coap
+openwsn-coap==0.0.3
 pycryptodome
 cbor
 hkdf
