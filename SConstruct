@@ -31,7 +31,6 @@ Usage:
     scons [options] <rungui|runcli|runweb|runrover>
     scons copy-simfw
     scons <sdist|upload|sdist-native>
-    scons unittests
     scons docs
 
 Targets:
@@ -317,28 +316,6 @@ def makeNativeSdist(env):
 
 Alias('sdist-native', makeNativeSdist(env))
 
-#===== unittest
-
-# scan for SConscript contains unit tests
-dirs = [
-    os.path.join('openvisualizer', 'moteProbe'),
-    os.path.join('openvisualizer', 'openLbr'),
-    os.path.join('openvisualizer', 'RPL'),
-]
-for d in dirs:
-    SConscript(
-        os.path.join(d, 'SConscript'),
-        exports = {"env": env},
-    )
-
-Alias(
-    'unittests',
-    [
-        'unittests_moteProbe',
-        'unittests_openLbr',
-        'unittests_RPL',
-    ]
-)
 
 #===== docs
 
