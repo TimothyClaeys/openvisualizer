@@ -5,13 +5,12 @@
 # Released under the BSD 2-Clause license as published at the link below.
 # http://opensource.org/licenses/BSD-2-Clause
 
-import datetime
 import functools
 import logging
 import re
-import time
 
 import bottle
+import datetime
 from bottle import view, response
 
 from openvisualizer import ovVersion
@@ -29,18 +28,18 @@ view = functools.partial(view, ovVersion='.'.join(list([str(v) for v in ovVersio
 class WebServer(eventBusClient):
     def __init__(self, app, web_srv):
         """
-    Provides web UI for OpenVisualizer. Runs as a webapp in a Bottle web server.
+        Provides web UI for OpenVisualizer. Runs as a webapp in a Bottle web server.
         :param app: OpenVisualizerApp
         :param web_srv: Web server
         """
-        log.info('Creating OpenVisualizerWeb')
+        log.info('Starting webserver')
 
         # store params
         self.app = app
         self.engine = SimEngine.SimEngine()
         self.web_srv = web_srv
 
-        # initialize parent classes
+        # initialize pawin classes
         super(WebServer, self).__init__(name='WebServer', registrations=[])
 
         self._define_routes()
@@ -50,7 +49,6 @@ class WebServer(eventBusClient):
         # Set DAGroots imported
         if app.dagroot_list:
             # Wait the end of the mote threads creation
-            time.sleep(1)
             for moteid in app.dagroot_list:
                 self._show_moteview(moteid)
                 self._get_mote_data(moteid)
