@@ -13,6 +13,7 @@ import json
 import logging
 import logging.config
 import os
+
 import signal
 import sys
 
@@ -20,7 +21,6 @@ import utils as u
 from openvisualizer.OVtracer import OVtracer
 from openvisualizer.SimEngine import SimEngine, MoteHandler
 from openvisualizer.eventBus import eventBusMonitor
-from openvisualizer.eventLogger import eventLogger
 from openvisualizer.jrc import jrc
 from openvisualizer.motehandler.moteconnector import moteconnector
 from openvisualizer.motehandler.moteprobe import moteprobe
@@ -118,7 +118,6 @@ class OpenVisualizerApp(object):
 
         # create a MoteState for each MoteConnector
         self.mote_states = [motestate.MoteState(mc) for mc in self.mote_connectors]
-        self.eventLoggers = [eventLogger.eventLogger(ms) for ms in self.mote_states]
 
         # boot all emulated motes, if applicable
         if self.simulator_mode:
