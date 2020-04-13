@@ -7,7 +7,7 @@ import logging
 import threading
 
 import openvisualizer.openvisualizer_utils as u
-from openvisualizer.eventBus import eventBusClient
+from openvisualizer.eventbus import eventbusclient
 from openvisualizer.openLbr.sixlowpan_frag import Fragmentor
 from openvisualizer.opentun.opentun import OpenTun
 
@@ -18,7 +18,7 @@ log.addHandler(logging.NullHandler())
 
 # ============================ parameters ======================================
 
-class OpenLbr(eventBusClient.eventBusClient):
+class OpenLbr(eventbusclient.EventBusClient):
     """
     Class which is responsible for translating between 6LoWPAN and IPv6
     headers.
@@ -159,7 +159,7 @@ class OpenLbr(eventBusClient.eventBusClient):
         self.fragmentor = Fragmentor()
 
         # initialize parent class
-        eventBusClient.eventBusClient.__init__(
+        eventbusclient.EventBusClient.__init__(
             self,
             name='OpenLBR',
             registrations=[

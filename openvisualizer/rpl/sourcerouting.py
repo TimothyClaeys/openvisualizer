@@ -19,10 +19,10 @@ log.addHandler(logging.NullHandler())
 import threading
 
 import openvisualizer.openvisualizer_utils as u
-from openvisualizer.eventBus import eventBusClient
+from openvisualizer.eventbus import eventbusclient
 
 
-class SourceRoute(eventBusClient.eventBusClient):
+class SourceRoute(eventbusclient.EventBusClient):
        
     def __init__(self):
         
@@ -31,7 +31,7 @@ class SourceRoute(eventBusClient.eventBusClient):
         self.parents         = {}
         
         # initialize parent class
-        eventBusClient.eventBusClient.__init__(
+        eventbusclient.EventBusClient.__init__(
             self,
             name             = 'SourceRoute',
             registrations =  []

@@ -16,7 +16,7 @@ from bottle import view, response
 from openvisualizer import ovVersion
 from openvisualizer.BspEmulator import VcdLogger
 from openvisualizer.SimEngine import SimEngine
-from openvisualizer.eventBus.eventBusClient import eventBusClient
+from openvisualizer.eventbus.eventbusclient import EventBusClient
 from openvisualizer.motehandler.motestate.motestate import MoteState
 
 log = logging.getLogger('WebServer')
@@ -25,7 +25,7 @@ log = logging.getLogger('WebServer')
 view = functools.partial(view, ovVersion='.'.join(list([str(v) for v in ovVersion.VERSION])))
 
 
-class WebServer(eventBusClient):
+class WebServer(EventBusClient):
     def __init__(self, app, web_srv):
         """
         Provides web UI for OpenVisualizer. Runs as a webapp in a Bottle web server.

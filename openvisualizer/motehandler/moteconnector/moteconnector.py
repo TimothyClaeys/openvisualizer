@@ -11,7 +11,7 @@ import threading
 from pydispatch import dispatcher
 
 from openvisualizer.motehandler.moteconnector.openparser import parserexception, openparser
-from openvisualizer.eventBus.eventBusClient import eventBusClient
+from openvisualizer.eventbus.eventbusclient import EventBusClient
 from openvisualizer.motehandler.motestate.motestate import MoteState
 
 log = logging.getLogger('MoteConnector')
@@ -19,7 +19,7 @@ log.setLevel(logging.ERROR)
 log.addHandler(logging.NullHandler())
 
 
-class MoteConnector(eventBusClient):
+class MoteConnector(EventBusClient):
 
     def __init__(self, mote_probe):
 
