@@ -1,9 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
 # Copyright (c) 2010-2013, Regents of the University of California. 
 # All rights reserved. 
 #  
 # Released under the BSD 3-Clause license as published at the link below.
 # https://openwsn.atlassian.net/wiki/display/OW/License
+
 import curses
 import logging
 import logging.config
@@ -77,15 +79,18 @@ class Cli(Cmd):
             self.viewer.rerender()
             return False
 
-        if key == curses.KEY_BACKSPACE:
-            return key
+        # fix to capture osx backspace key
+        if key == curses.KEY_BACKSPACE or str(key) == '127':
+            return curses.KEY_BACKSPACE
         elif key == curses.KEY_MOUSE:
             self.viewer.handle_mouse_event()
             return key
         elif key == curses.KEY_UP:
             self.viewer.scroll(+1)
+            return False
         elif key == curses.KEY_DOWN:
             self.viewer.scroll(-1)
+            return False
         elif 127 < key < 32:
             return False
         else:
