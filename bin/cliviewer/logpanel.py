@@ -160,6 +160,10 @@ class LogPanel(Panel):
         self.win.leaveok(True)
 
         self.logs = deque()
+        self.infos = 0
+        self.errors = 0
+        self.crits = 0
+
         self.scroll_offset = 0
 
         self.statusbar = self.win.derwin(1, self.cols - 2, self.rows - 2, 1)
@@ -191,6 +195,7 @@ class LogPanel(Panel):
         try:
             self.panel.hide()
             curses.panel.update_panels()
+        # this is to catch an error in OSX (don't remove)
         except curses.panel.error:
             pass
 
@@ -199,6 +204,13 @@ class LogPanel(Panel):
 
     def add_log(self, msg, level):
         self.logs.append(msg)
+
+        if level == 'INFO':
+            self.infos += 1
+        elif level == 'ERROR':
+            self.errors += 1
+        if level == 'CRITICAL':
+            self.crits += 1
 
     def dispatch_click(self, y, x):
         self.render_panel()
@@ -286,7 +298,8 @@ class LogPanel(Panel):
         try:
             self.statusbar.addstr(
                 "   STATUS   {}  --  (INFO: {})   (ERRORS: {})   (CRITICAL: {})  |  SCROLL: {}/{}".format(
-                    self.name, 0, 0, 0, len(self.logs) - self.scroll_offset, len(self.logs)))
+                    self.name, self.infos, self.errors, self.crits, len(self.logs) - self.scroll_offset,
+                    len(self.logs)))
         except curses.error:
             pass
 
