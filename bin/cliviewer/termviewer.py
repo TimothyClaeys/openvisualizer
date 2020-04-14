@@ -106,7 +106,6 @@ class TermViewer:
         rows_spc = self.rows - self.INPUT_BOX_H - self.LOGO_HEIGTH
 
         if rows_lpc < 1 or cols_lpc < 1 or self.rows <= self.INPUT_BOX_H + 5 or rows_spc < 1:
-            log.info("Skip rendering")
             return
 
         self.lpc.mv_and_resize(rows_lpc, cols_lpc, 0, self.SIDE_BOX_W)

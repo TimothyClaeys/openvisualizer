@@ -188,8 +188,11 @@ class LogPanel(Panel):
         self.render_panel()
 
     def hide(self):
-        self.panel.hide()
-        curses.panel.update_panels()
+        try:
+            self.panel.hide()
+            curses.panel.update_panels()
+        except curses.panel.error:
+            pass
 
     def got_clicked(self, y, x):
         return super(LogPanel, self).got_clicked(y, x) and not self.panel.hidden()
