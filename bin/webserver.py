@@ -13,7 +13,7 @@ import bottle
 import datetime
 from bottle import view, response
 
-from openvisualizer import ovVersion
+from openvisualizer import version
 from openvisualizer.BspEmulator import VcdLogger
 from openvisualizer.SimEngine import SimEngine
 from openvisualizer.eventbus.eventbusclient import EventBusClient
@@ -22,7 +22,7 @@ from openvisualizer.motehandler.motestate.motestate import MoteState
 log = logging.getLogger('WebServer')
 
 # add default parameters to all bottle templates
-view = functools.partial(view, ovVersion='.'.join(list([str(v) for v in ovVersion.VERSION])))
+view = functools.partial(view, ovVersion='.'.join(list([str(v) for v in version.VERSION])))
 
 
 class WebServer(EventBusClient):
