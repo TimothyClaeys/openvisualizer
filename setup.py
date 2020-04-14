@@ -78,7 +78,7 @@ setup(
                         'openvisualizer.BspEmulator', 'openvisualizer.eventbus',
                         'openvisualizer.lbrClient', 'openvisualizer.motehandler.moteconnector',
                         'openvisualizer.motehandler.moteprobe', 'openvisualizer.motehandler.motestate',
-                        'openvisualizer.openLbr', 'openvisualizer.opentun',
+                        'openvisualizer.openlbr', 'openvisualizer.opentun',
                         'openvisualizer.rpl', 'openvisualizer.SimEngine', 'openvisualizer.remoteConnectorServer',
                         'openvisualizer.jrc'],
     scripts          = appdirGlob('openVisualizer*.py'),
