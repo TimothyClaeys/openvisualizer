@@ -1,5 +1,4 @@
 import curses
-import curses.panel
 import locale
 import logging
 from collections import deque
@@ -29,14 +28,11 @@ class LogPanelContainer(PanelContainer):
     def render_container(self):
         self.c_win.clear()
         self.c_win.addstr(1, 2, self.TITLE, curses.A_STANDOUT)
-
-        self.c_panel.bottom()
-        curses.panel.update_panels()
+        self.c_win.noutrefresh()
 
         for key in self.panels:
             logger, tab = self.panels[key]
             tab.render_panel()
-            logger.hide()
 
         self.panels[self.focus][self.PANEL].render_panel()
         self.panels[self.focus][self.TAB].render_panel()
@@ -65,9 +61,7 @@ class LogPanelContainer(PanelContainer):
             self.panels[key][self.TAB].mv_and_resize(rows, cols, y, x)
 
     def dispatch_double_click(self, y, x):
-        for key in self.panels:
-            if self.panels[key][self.PANEL].got_clicked(y, x):
-                self.panels[key][self.PANEL].dispatch_double_click(y, x)
+        pass
 
     def dispatch_click(self, y, x):
         panel = None
@@ -79,9 +73,6 @@ class LogPanelContainer(PanelContainer):
 
         if panel is None:
             return
-
-        for key in self.panels:
-            self.panels[key][self.PANEL].hide()
 
         self.panels[self.focus][self.PANEL].dispatch_click(y, x)
         self.panels[self.focus][self.TAB].dispatch_click(y, x)
@@ -99,17 +90,12 @@ class LogPanelContainer(PanelContainer):
                 self.panels[0][self.PANEL].add_log(msg, level)
             self.panels[int(mote_id)][self.PANEL].add_log(msg, level)
 
-            for key in self.panels:
-                if key != self.focus:
-                    self.panels[key][self.PANEL].hide()
-
             if int(mote_id) == int(self.focus):
                 self.panels[self.focus][self.PANEL].render_panel()
                 self.panels[self.focus][self.TAB].render_panel()
 
-            if self.c_win.is_wintouched:
-                with self.render_lock:
-                    curses.doupdate()
+            with self.render_lock:
+                curses.doupdate()
 
         except KeyError:
             log.error("Mote ID ({}) did not match with a log panel ID".format(mote_id))
@@ -142,17 +128,21 @@ class Tab(Panel):
         except curses.error:
             pass
 
-        self.panel.top()
-        curses.panel.update_panels()
+        self.win.noutrefresh()
 
     def dispatch_click(self, y, x):
         self.render_panel()
 
 
 class LogPanel(Panel):
-    ARROW_DOWN = u'\u25bc'.encode(code)
-    ARROW_UP = u'\u25b2'.encode(code)
-    DIAMOND = u'\u25c6'.encode(code)
+    try:
+        ARROW_DOWN = u'\u25bc'.encode(code)
+        ARROW_UP = u'\u25b2'.encode(code)
+        DIAMOND = u'\u25c6'.encode(code)
+    except UnicodeEncodeError:
+        ARROW_DOWN = 'v'
+        ARROW_UP = '^'
+        DIAMOND = 'o'
 
     def __init__(self, lock, rows, cols, y, x, name):
         super(LogPanel, self).__init__(lock, rows, cols, y, x)
@@ -165,7 +155,6 @@ class LogPanel(Panel):
         self.crits = 0
 
         self.scroll_offset = 0
-
         self.statusbar = self.win.derwin(1, self.cols - 2, self.rows - 2, 1)
         self.statusbar.bkgd(' ', curses.color_pair(Elements.STATUSBAR))
         self.statusbar.leaveok(True)
@@ -191,16 +180,8 @@ class LogPanel(Panel):
             self.scroll_offset = 0
         self.render_panel()
 
-    def hide(self):
-        try:
-            self.panel.hide()
-            curses.panel.update_panels()
-        # this is to catch an error in OSX (don't remove)
-        except curses.panel.error:
-            pass
-
     def got_clicked(self, y, x):
-        return super(LogPanel, self).got_clicked(y, x) and not self.panel.hidden()
+        return super(LogPanel, self).got_clicked(y, x)
 
     def add_log(self, msg, level):
         self.logs.append(msg)
@@ -214,9 +195,6 @@ class LogPanel(Panel):
 
     def dispatch_click(self, y, x):
         self.render_panel()
-
-    def dispatch_double_click(self, y, x):
-        pass
 
     def mv_and_resize(self, rows, cols, y, x):
         super(LogPanel, self).mv_and_resize(rows, cols, y, x)
@@ -248,8 +226,7 @@ class LogPanel(Panel):
         self._render_scrollbar()
         self._render_logs()
 
-        self.panel.top()
-        curses.panel.update_panels()
+        self.win.noutrefresh()
 
     def _render_logs(self):
         self.canvas.clear()

@@ -1,5 +1,4 @@
 import curses
-import curses.panel
 import locale
 import logging
 
@@ -20,15 +19,13 @@ class LogoPanelContainer(PanelContainer):
     def render_container(self):
         self.c_win.clear()
         self.c_win.border()
-
-        self.c_panel.bottom()
-        curses.panel.update_panels()
+        self.c_win.noutrefresh()
 
         for key in self.panels:
             self.panels[key].render_panel()
 
         with self.render_lock:
-            self.c_win.refresh()
+            curses.doupdate()
 
     def dispatch_click(self, y, x):
         pass
@@ -58,9 +55,7 @@ class LogoPanel(Panel):
             self.win.addstr(self.LOGO, curses.A_BOLD)
         except curses.error:
             pass
-
-        self.panel.top()
-        curses.panel.update_panels()
+        self.win.noutrefresh()
 
     def dispatch_click(self, y, x):
         pass

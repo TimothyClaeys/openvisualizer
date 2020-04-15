@@ -1,5 +1,4 @@
 import curses
-import curses.panel
 import json
 import locale
 import logging
@@ -39,11 +38,8 @@ class SidePanelContainer(PanelContainer):
     def render_container(self):
         self.c_win.clear()
         self.c_win.border()
-
         self.c_win.addstr(0, int(self.cols / 2 - len(self.TITLE) / 2), self.TITLE, curses.A_STANDOUT)
-
-        self.c_panel.bottom()
-        curses.panel.update_panels()
+        self.c_win.noutrefresh()
 
         if self.motes_visible is not None:
             for shift, key in enumerate(self.motes_visible):
@@ -54,31 +50,22 @@ class SidePanelContainer(PanelContainer):
 
     def dispatch_click(self, y, x):
         panel = None
-        shift = 0
 
         for s, key in enumerate(self.motes_visible):
             if self.panels[key].got_clicked(y, x):
                 panel = key
-                shift = s
                 break
 
         if panel is None:
             return
 
-        self.panels[panel].dispatch_click(y, x, shift)
+        if not self.panels[panel].dispatch_click(y, x):
+            self.panels[panel].render_panel()
 
-        if self.panels[panel].folded:
-            for shift, key in enumerate(self.motes_visible):
-                if key != panel:
-                    self.panels[key].show()
+            with self.render_lock:
+                curses.doupdate()
         else:
-            for key in self.motes_visible:
-                if key != panel:
-                    self.panels[key].hide()
-
-        self.c_win.noutrefresh()
-        with self.render_lock:
-            curses.doupdate()
+            self.render_container()
 
     def add_panel(self, panel_name, panel_id, color=0):
         sp = SidePanel(self.render_lock, 1, self.cols - 2, self.y + 1, self.x + 1, panel_name, self.panel_shift, color)
@@ -97,9 +84,14 @@ class SidePanelContainer(PanelContainer):
 
 
 class SidePanel(Panel):
-    ARROW_DOWN = u'\u25bc'.encode(code)
-    ARROW_UP = u'\u25b2'.encode(code)
-    DIAMOND = u'\u2b25'.encode(code)
+    try:
+        ARROW_DOWN = u'\u25bc'.encode(code)
+        ARROW_UP = u'\u25b2'.encode(code)
+        DIAMOND = u'\u25c6'.encode(code)
+    except UnicodeEncodeError:
+        ARROW_DOWN = 'v'
+        ARROW_UP = '^'
+        DIAMOND = 'O'
 
     def __init__(self, render_lock, rows, cols, y, x, panel_name, mote_num, col_num):
         super(SidePanel, self).__init__(render_lock, rows, cols, y, x)
@@ -125,45 +117,31 @@ class SidePanel(Panel):
             ]
 
     def got_clicked(self, y, x):
-        res = super(SidePanel, self).got_clicked(y, x)
-        return res and not self.panel.hidden()
+        return super(SidePanel, self).got_clicked(y, x)
 
     def set_container_size(self, c_rows, c_cols):
         self.c_rows = c_rows
         self.c_cols = c_cols
 
-    def hide(self):
-        self.panel.hide()
-        curses.panel.update_panels()
-
-    def show(self):
-        self.panel.show()
-        curses.panel.update_panels()
-
     def render_panel(self, offset=0):
         self.win.clear()
         self.win.mvwin(self.y + offset, self.x)
         self.win.addstr(self.name)
+
         if self.folded:
             self.win.addstr(0, self.cols - 3, self.ARROW_DOWN)
         else:
             self.win.addstr(0, self.cols - 3, self.ARROW_UP)
             self._populate_mote_status()
 
-        with self.render_lock:
-            self.win.noutrefresh()
-
-        if not self.panel.hidden():
-            self.panel.top()
-
-        curses.panel.update_panels()
+        self.win.noutrefresh()
 
     def mv_and_resize(self, rows, cols, y, x):
         super(SidePanel, self).mv_and_resize(1, cols - 2, y + 1, x + 1)
         # close all mote detail panels
         self.folded = True
 
-    def dispatch_click(self, y, x, shift=0):
+    def dispatch_click(self, y, x):
         self.folded = not self.folded
 
         if not self.folded:
@@ -171,16 +149,13 @@ class SidePanel(Panel):
             self.cols = self.c_cols - 2
             self.win.resize(self.c_rows - 2, self.c_cols - 2)
             self.win.mvwin(self.y, self.x)
-            shift = 0
         else:
-            self.hide()
             self.rows = 1
-            self.win.resize(self.rows, self.cols)
-            self.win.mvwin(self.y + shift, self.x)
             self.state_thread.join()
-            self.show()
+            self.win.resize(self.rows, self.cols)
+            self.win.mvwin(self.y, self.x)
 
-        self.render_panel(offset=shift)
+        return self.folded
 
     def update_state(self, mote_status):
         self.status = mote_status
@@ -205,10 +180,11 @@ class SidePanel(Panel):
                 except curses.error:
                     pass
 
+            self.state_panel.noutrefresh()
             with self.render_lock:
-                self.state_panel.refresh()
+                curses.doupdate()
 
-            time.sleep(0.25)
+            time.sleep(0.1)
 
     def _get_dagroot(self, idm):
         self.state_panel.addstr(1, 1, self.DIAMOND)
