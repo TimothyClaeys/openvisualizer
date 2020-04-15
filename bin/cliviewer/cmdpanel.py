@@ -1,5 +1,4 @@
 import curses
-import curses.panel
 import curses.textpad
 import locale
 import logging
@@ -75,7 +74,10 @@ class CmdRepl(Panel):
 
 
 class CmdPanel(Panel):
-    PROMPT = u'\u25b8'.encode(code)
+    try:
+        PROMPT = u'\u25b8'.encode(code)
+    except UnicodeEncodeError:
+        PROMPT = '>'
 
     def __init__(self, render_lock, rows, cols, y, x):
         super(CmdPanel, self).__init__(render_lock, rows, cols, y, x)

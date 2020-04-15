@@ -84,9 +84,14 @@ class SidePanelContainer(PanelContainer):
 
 
 class SidePanel(Panel):
-    ARROW_DOWN = u'\u25bc'.encode(code)
-    ARROW_UP = u'\u25b2'.encode(code)
-    DIAMOND = u'\u2b25'.encode(code)
+    try:
+        ARROW_DOWN = u'\u25bc'.encode(code)
+        ARROW_UP = u'\u25b2'.encode(code)
+        DIAMOND = u'\u25c6'.encode(code)
+    except UnicodeEncodeError:
+        ARROW_DOWN = 'v'
+        ARROW_UP = '^'
+        DIAMOND = 'O'
 
     def __init__(self, render_lock, rows, cols, y, x, panel_name, mote_num, col_num):
         super(SidePanel, self).__init__(render_lock, rows, cols, y, x)

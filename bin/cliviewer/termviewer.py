@@ -1,5 +1,4 @@
 import curses
-import curses.textpad
 import logging
 import threading
 from random import randint

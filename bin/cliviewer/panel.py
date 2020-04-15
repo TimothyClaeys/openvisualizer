@@ -1,5 +1,4 @@
 import curses
-import curses.panel
 import logging
 from abc import ABCMeta, abstractmethod
 

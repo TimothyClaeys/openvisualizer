@@ -135,9 +135,14 @@ class Tab(Panel):
 
 
 class LogPanel(Panel):
-    ARROW_DOWN = u'\u25bc'.encode(code)
-    ARROW_UP = u'\u25b2'.encode(code)
-    DIAMOND = u'\u25c6'.encode(code)
+    try:
+        ARROW_DOWN = u'\u25bc'.encode(code)
+        ARROW_UP = u'\u25b2'.encode(code)
+        DIAMOND = u'\u25c6'.encode(code)
+    except UnicodeEncodeError:
+        ARROW_DOWN = 'v'
+        ARROW_UP = '^'
+        DIAMOND = 'o'
 
     def __init__(self, lock, rows, cols, y, x, name):
         super(LogPanel, self).__init__(lock, rows, cols, y, x)
