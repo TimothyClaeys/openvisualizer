@@ -21,14 +21,11 @@ class LogDispatcher(logging.Handler):
             return 0
 
     def emit(self, record):
-        try:
-            level = record.levelname
-            mote_id = LogDispatcher.extract_mote_id(record.message)
-            msg = self.format(record)
-            fs = "{}\n".format(msg)
-            self.viewer.lpc.dispatch_log(fs, mote_id, level)
-        except Exception:
-            pass
+        level = record.levelname
+        mote_id = LogDispatcher.extract_mote_id(record.message)
+        msg = self.format(record)
+        fs = "{}\n".format(msg)
+        self.viewer.lpc.dispatch_log(fs, mote_id, level)
 
 
 logging.handlers.LogDispatcher = LogDispatcher

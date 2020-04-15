@@ -17,9 +17,6 @@ class PanelContainer(object):
         self.c_win = curses.newwin(rows, cols, y, x)
         self.c_win.leaveok(True)
 
-        self.c_panel = curses.panel.new_panel(self.c_win)
-        self.c_panel.hide()
-
         self.rows = rows
         self.cols = cols
         self.y = y
@@ -65,7 +62,6 @@ class Panel(object):
         self.x = x
 
         self.win = curses.newwin(rows, cols, y, x)
-        self.panel = curses.panel.new_panel(self.win)
 
     def mv_and_resize(self, rows, cols, y, x):
         self.rows = rows

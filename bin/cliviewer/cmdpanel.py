@@ -23,16 +23,13 @@ class CmdPanelContainer(PanelContainer):
         self.c_win.clear()
         self.c_win.border()
         self.c_win.addstr(0, int(self.cols / 2) - int(len(self.TITLE) / 2), self.TITLE, curses.A_STANDOUT)
-
-        self.c_panel.bottom()
-        curses.panel.update_panels()
+        self.c_win.noutrefresh()
 
         for key in self.panels:
             self.panels[key].render_panel()
 
-        if self.c_win.is_wintouched:
-            with self.render_lock:
-                self.c_win.refresh()
+        with self.render_lock:
+            curses.doupdate()
 
     def dispatch_click(self, y, x):
         pass
@@ -74,12 +71,7 @@ class CmdRepl(Panel):
 
     def render_panel(self):
         self.win.clear()
-
-        self.panel.top()
-        curses.panel.update_panels()
-
-        with self.render_lock:
-            self.win.refresh()
+        self.win.noutrefresh()
 
 
 class CmdPanel(Panel):
@@ -99,14 +91,9 @@ class CmdPanel(Panel):
     def render_panel(self):
         self.win.clear()
         self.win.addstr(self.rows - 1, 1, self.PROMPT)
-
-        self.panel.top()
-        curses.panel.update_panels()
+        self.win.noutrefresh()
 
         self.repl.render_panel()
-
-        with self.render_lock:
-            self.win.refresh()
 
     def dispatch_click(self, y, x):
         pass
