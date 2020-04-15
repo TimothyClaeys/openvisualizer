@@ -4,6 +4,7 @@ import locale
 import logging
 import threading
 
+import datetime
 import time
 
 from openvisualizer.motehandler.motestate.motestate import MoteState as ms
@@ -54,9 +55,12 @@ class SidePanelContainer(PanelContainer):
         for s, key in enumerate(self.motes_visible):
             if self.panels[key].got_clicked(y, x):
                 panel = key
-                break
+            else:
+                self.panels[key].hide()
 
         if panel is None:
+            for key in self.motes_visible:
+                self.panels[key].show()
             return
 
         if not self.panels[panel].dispatch_click(y, x):
@@ -87,11 +91,15 @@ class SidePanel(Panel):
     try:
         ARROW_DOWN = u'\u25bc'.encode(code)
         ARROW_UP = u'\u25b2'.encode(code)
-        DIAMOND = u'\u25c6'.encode(code)
+        DIAMOND = u'\u2b25'.encode(code)
+        CHECKMARK = u'\u2713'.encode(code)
+        CROSS = u'\u2717'.encode(code)
     except UnicodeEncodeError:
         ARROW_DOWN = 'v'
         ARROW_UP = '^'
         DIAMOND = 'O'
+        CHECKMARK = 'V'
+        CROSS = 'X'
 
     def __init__(self, render_lock, rows, cols, y, x, panel_name, mote_num, col_num):
         super(SidePanel, self).__init__(render_lock, rows, cols, y, x)
@@ -101,23 +109,41 @@ class SidePanel(Panel):
 
         self.win.bkgd(" ", curses.color_pair(self.col_num))
         self.win.leaveok(True)
+        self.hidden = False
 
         self.folded = True
         self.c_rows = 0
         self.c_cols = 0
 
-        self.status = None
+        self.idm = None
+        self.sync = None
+        self.join = None
+        self.rank = None
+        self.mac = None
+        self.neighbors = None
+        self.last_update = None
+
         self.state_thread = None
         self.state_functions = \
             [
                 self._get_dagroot,
                 self._get_prefix,
                 self._get_addr_64b,
-                self._get_pan_id
+                self._get_pan_id,
+                self._get_sync_state,
+                self._get_join_state,
+                self._get_dagrank,
+                self._get_macstats,
             ]
 
+    def hide(self):
+        self.hidden = True
+
+    def show(self):
+        self.hidden = False
+
     def got_clicked(self, y, x):
-        return super(SidePanel, self).got_clicked(y, x)
+        return super(SidePanel, self).got_clicked(y, x) and not self.hidden
 
     def set_container_size(self, c_rows, c_cols):
         self.c_rows = c_rows
@@ -127,6 +153,8 @@ class SidePanel(Panel):
         self.win.clear()
         self.win.mvwin(self.y + offset, self.x)
         self.win.addstr(self.name)
+
+        self.hidden = False
 
         if self.folded:
             self.win.addstr(0, self.cols - 3, self.ARROW_DOWN)
@@ -158,7 +186,12 @@ class SidePanel(Panel):
         return self.folded
 
     def update_state(self, mote_status):
-        self.status = mote_status
+        self.idm = json.loads(mote_status[ms.ST_IDMANAGER])
+        self.sync = json.loads(mote_status[ms.ST_ISSYNC])
+        self.join = json.loads(mote_status[ms.ST_JOINED])
+        self.rank = json.loads(mote_status[ms.ST_MYDAGRANK])
+        self.mac = json.loads(mote_status[ms.ST_MACSTATS])
+        self.last_update = datetime.datetime.now()
 
     # private functions
 
@@ -166,42 +199,80 @@ class SidePanel(Panel):
         self.state_thread = threading.Thread(target=self._updater)
         rows, cols = self.win.getmaxyx()
         self.state_panel = self.win.derwin(rows - 2, cols, 1, 0)
+        self.state_panel.leaveok(True)
         self.state_panel.bkgd(' ', curses.color_pair(self.col_num + 10))
         self.state_thread.start()
 
     def _updater(self):
         while not self.folded:
             self.state_panel.clear()
-            idm = json.loads(self.status[ms.ST_IDMANAGER])
 
-            for func in self.state_functions:
+            for line, func in enumerate(self.state_functions):
                 try:
-                    func(idm)
+                    func(line + 1)
                 except curses.error:
                     pass
 
+            self.win.addstr(self.rows - 1, 4, "Last status update: {}".format(self.last_update.strftime("%H:%M:%S")))
+
             self.state_panel.noutrefresh()
+            self.win.noutrefresh()
+
             with self.render_lock:
                 curses.doupdate()
 
-            time.sleep(0.1)
+            time.sleep(0.2)
 
-    def _get_dagroot(self, idm):
-        self.state_panel.addstr(1, 1, self.DIAMOND)
-        self.state_panel.addstr(1, 3, 'DAGroot:', curses.A_UNDERLINE)
-        self.state_panel.addstr(1, 3 + len('DAGroot:') + 1, '{}'.format(idm[0]["isDAGroot"]))
+    def _get_dagroot(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'DAGroot:', curses.A_UNDERLINE)
+        if int(self.idm[0]["isDAGroot"]):
+            self.state_panel.addstr(line, 3 + len('DAGroot:') + 1, '{}'.format(self.CHECKMARK))
+        else:
+            self.state_panel.addstr(line, 3 + len('DAGroot:') + 1, '{}'.format(self.CROSS))
 
-    def _get_prefix(self, idm):
-        self.state_panel.addstr(2, 1, self.DIAMOND)
-        self.state_panel.addstr(2, 3, 'Prefix:', curses.A_UNDERLINE)
-        self.state_panel.addstr(2, 3 + len('Prefix:') + 1, '{}'.format(idm[0]["myPrefix"][:-9]))
+    def _get_prefix(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'Prefix:', curses.A_UNDERLINE)
+        self.state_panel.addstr(line, 3 + len('Prefix:') + 1, '{}'.format(self.idm[0]["myPrefix"][:-9]))
 
-    def _get_addr_64b(self, idm):
-        self.state_panel.addstr(3, 1, self.DIAMOND)
-        self.state_panel.addstr(3, 3, 'ADDR 64b:', curses.A_UNDERLINE)
-        self.state_panel.addstr(3, 3 + len('ADDR 64b:') + 1, '{}'.format(idm[0]["my64bID"][:-6]))
+    def _get_addr_64b(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'ADDR 64b:', curses.A_UNDERLINE)
+        self.state_panel.addstr(line, 3 + len('ADDR 64b:') + 1, '{}'.format(self.idm[0]["my64bID"][:-6]))
 
-    def _get_pan_id(self, idm):
-        self.state_panel.addstr(4, 1, self.DIAMOND)
-        self.state_panel.addstr(4, 3, 'PAN ID:', curses.A_UNDERLINE)
-        self.state_panel.addstr(4, 3 + len('PAN ID:') + 1, '{}'.format(idm[0]["myPANID"][:-8]))
+    def _get_pan_id(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'PAN ID:', curses.A_UNDERLINE)
+        self.state_panel.addstr(line, 3 + len('PAN ID:') + 1, '{}'.format(self.idm[0]["myPANID"][:-8]))
+
+    def _get_sync_state(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'SYNC:', curses.A_UNDERLINE)
+        if int(self.sync[0]["isSync"]):
+            self.state_panel.addstr(line, 3 + len('SYNC:') + 1, '{}'.format(self.CHECKMARK))
+        else:
+            self.state_panel.addstr(line, 3 + len('SYNC:') + 1, '{}'.format(self.CROSS))
+
+    def _get_join_state(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'JOINED:', curses.A_UNDERLINE)
+
+        if int(self.idm[0]["isDAGroot"]):
+            self.state_panel.addstr(line, 3 + len('JOINED:') + 1, '{}'.format(self.CHECKMARK))
+        else:
+            asn = int(self.join[0]['joinedAsn'], 16)
+            if asn:
+                self.state_panel.addstr(line, 3 + len('JOINED:') + 1, '{} (asn: {})'.format(self.CHECKMARK, hex(asn)))
+            else:
+                self.state_panel.addstr(line, 3 + len('JOINED:') + 1, '{}'.format(self.CROSS))
+
+    def _get_dagrank(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'DAGRANK:', curses.A_UNDERLINE)
+        self.state_panel.addstr(line, 3 + len('DAGRANK:') + 1, '{}'.format(self.rank[0]['myDAGrank']))
+
+    def _get_macstats(self, line):
+        self.state_panel.addstr(line, 1, self.DIAMOND)
+        self.state_panel.addstr(line, 3, 'DUTY CYCLE:', curses.A_UNDERLINE)
+        self.state_panel.addstr(line, 3 + len('DUTY CYLCE:') + 1, '{}'.format(self.mac[0]['dutyCycle']))

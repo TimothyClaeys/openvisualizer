@@ -24,8 +24,8 @@ import time
 import build_python_path
 import openvisualizer_app
 import utils as u
-from cliviewer.termviewer import TermViewer
 from cliviewer.logdispatcher import LogDispatcher
+from cliviewer.termviewer import TermViewer
 from openvisualizer.motehandler.motestate.motestate import MoteState
 from webserver import WebServer
 
@@ -98,7 +98,7 @@ class Cli(Cmd):
 
     def mote_updater(self):
         while not self.quit:
-            time.sleep(0.5)
+            time.sleep(1)
 
             if not self.found_motes:
                 continue
@@ -112,13 +112,7 @@ class Cli(Cmd):
                             ms.ST_ASN: ms.get_state_elem(ms.ST_ASN).to_json('data'),
                             ms.ST_ISSYNC: ms.get_state_elem(ms.ST_ISSYNC).to_json('data'),
                             ms.ST_MYDAGRANK: ms.get_state_elem(ms.ST_MYDAGRANK).to_json('data'),
-                            ms.ST_KAPERIOD: ms.get_state_elem(ms.ST_KAPERIOD).to_json('data'),
-                            ms.ST_OUPUTBUFFER: ms.get_state_elem(ms.ST_OUPUTBUFFER).to_json('data'),
-                            ms.ST_BACKOFF: ms.get_state_elem(ms.ST_BACKOFF).to_json('data'),
                             ms.ST_MACSTATS: ms.get_state_elem(ms.ST_MACSTATS).to_json('data'),
-                            ms.ST_SCHEDULE: ms.get_state_elem(ms.ST_SCHEDULE).to_json('data'),
-                            ms.ST_QUEUE: ms.get_state_elem(ms.ST_QUEUE).to_json('data'),
-                            ms.ST_NEIGHBORS: ms.get_state_elem(ms.ST_NEIGHBORS).to_json('data'),
                             ms.ST_JOINED: ms.get_state_elem(ms.ST_JOINED).to_json('data'),
                         }
                     self.viewer.spc.renew_mote_state(int(mote, 16), state)
